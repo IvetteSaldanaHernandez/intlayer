@@ -1,6 +1,6 @@
 ---
 createdAt: 2024-08-11
-updatedAt: 2025-09-17
+updatedAt: 2025-09-26
 title: CLI
 description: Discover how to use the Intlayer CLI to manage your multilingual website. Follow the steps in this online documentation to set up your project in a few minutes.
 keywords:
@@ -61,6 +61,15 @@ To see how to configure available locales, or other parameters, refer to the [co
 
 ## Run intlayer commands
 
+### Check CLI version
+
+```bash
+npx intlayer --version
+npx intlayer version
+```
+
+Both commands print the installed Intlayer CLI version.
+
 ### Build dictionaries
 
 To build your dictionaries, you can run the commands:
@@ -96,6 +105,35 @@ This command will find your declaration content files as default as `./src/**/*.
 - **`--env-file`**: Provide a custom environment file to load variables from. Useful in the case you use environment variables in your intlayer configuration file.
 
   > Example: `npx intlayer build --env-file .env.production.local`
+
+- **`--with`**: Start command in parallel with the build.
+
+  > Example: `npx intlayer build --with "next dev --turbopack"`
+
+- **`--skip-prepare`**: Skip the prepare step.
+
+  > Example: `npx intlayer build --skip-prepare`
+
+### Watch dictionaries
+
+```bash
+npx intlayer watch
+```
+
+This command will watch for changes in your content declaration files and build the dictionaries in the `.intlayer` directory.
+This command is the equivalent of `npx intlayer build --watch --skip-prepare`.
+
+##### Aliases:
+
+- `npx intlayer dictionaries watch`
+- `npx intlayer dictionary watch`
+- `npx intlayer dic watch`
+
+##### Arguments:
+
+- **`--with`**: Start command in parallel with the watch.
+
+  > Example: `npx intlayer watch --with "next dev --turbopack"`
 
 ### Push dictionaries
 
@@ -150,7 +188,7 @@ If [intlayer editor](https://github.com/aymericzip/intlayer/blob/main/docs/docs/
 
 **Log options:**
 
-- **`--verbose`**: Enable verbose logging for debugging.
+- **`--verbose`**: Enable verbose logging for debugging. (default to true using CLI)
 
 **Git options:**
 
@@ -209,7 +247,7 @@ If [intlayer editor](https://github.com/aymericzip/intlayer/blob/main/docs/docs/
 
 **Log options:**
 
-- **`--verbose`**: Enable verbose logging for debugging.
+- **`--verbose`**: Enable verbose logging for debugging. (default to true using CLI)
 
 ##### Example:
 
@@ -300,7 +338,7 @@ This command analyzes your content declaration files for potential issues such a
 
 **Log options:**
 
-- **`--verbose`**: Enable verbose logging for debugging.
+- **`--verbose`**: Enable verbose logging for debugging. (default to true using CLI)
 
 ##### Example:
 
@@ -346,7 +384,7 @@ Total missing required locales: 0
 
 **Log options:**
 
-- **`--verbose`**: Enable verbose logging for debugging.
+- **`--verbose`**: Enable verbose logging for debugging. (default to true using CLI)
 
   > Example: `npx intlayer content test --verbose`
 
@@ -417,7 +455,7 @@ npx intlayer configuration get
 - **`--env`**: Specify the environment (e.g., `development`, `production`).
 - **`--env-file`**: Provide a custom environment file to load variables from.
 - **`--base-dir`**: Specify the base directory for the project.
-- **`--verbose`**: Enable verbose logging for debugging.
+- **`--verbose`**: Enable verbose logging for debugging. (default to true using CLI)
 
 #### Push Configuration
 
@@ -437,15 +475,15 @@ npx intlayer configuration push
 - **`--env`**: Specify the environment (e.g., `development`, `production`).
 - **`--env-file`**: Provide a custom environment file to load variables from.
 - **`--base-dir`**: Specify the base directory for the project.
-- **`--verbose`**: Enable verbose logging for debugging.
+- **`--verbose`**: Enable verbose logging for debugging. (default to true using CLI)
 
 By pushing the configuration, your project is fully integrated with the Intlayer CMS, enabling seamless dictionary management across teams.
 
-### Documentation Management
+### Document Management
 
 The `doc` commands provide tools for managing and translating documentation files across multiple locales.
 
-#### Translate Documentation
+#### Translate Document
 
 The `doc translate` command automatically translates documentation files from a base locale to target locales using AI translation services.
 
@@ -516,7 +554,7 @@ npx intlayer doc translate
 
 **Log options:**
 
-- **`--verbose`**: Enable verbose logging for debugging.
+- **`--verbose`**: Enable verbose logging for debugging. (default to true using CLI)
 
   > Example: `npx intlayer doc translate --verbose`
 
@@ -552,9 +590,9 @@ npx intlayer doc translate
 > - `{{baseLocale}}_` by `{{locale}}_`
 > - `.{{baseLocaleName}}.` by `.{{localeName}}.`
 >
-> If the pattern is not found, the output file will add the `.{{locale}}` at the extentions of the file. `./my/file.md` will be translated to `./my/file.fr.md` for the French locale.
+> If the pattern is not found, the output file will add the `.{{locale}}` at the extensions of the file. `./my/file.md` will be translated to `./my/file.fr.md` for the French locale.
 
-#### Review Documentation
+#### Review Document
 
 The `doc review` command analyzes documentation files for quality, consistency, and completeness across different locales.
 
@@ -590,6 +628,18 @@ If you activated one of the git options, the command will only review the part o
   "intlayer:test": "npx intlayer content test",
   "intlayer:doc:translate": "npx intlayer doc translate",
   "intlayer:doc:review": "npx intlayer doc review"
+}
+```
+
+### Editor commands
+
+The `editor` command rewrap the `intlayer-editor` commands.
+
+> To be able to use the `editor` command, the `intlayer-editor` package must be installed. (See [Intlayer Visual Editor](https://github.com/aymericzip/intlayer/blob/main/docs/docs/en/intlayer_visual_editor.md))
+
+```json fileName="package.json"
+"scripts": {
+  "intlayer:editor:start": "npx intlayer editor start --with 'next dev --turbopack'"
 }
 ```
 
@@ -673,8 +723,12 @@ npx clear-npx-cache
 
 ## Doc History
 
-| Version | Date       | Changes                                     |
-| ------- | ---------- | ------------------------------------------- |
-| 6.0.0   | 2025-09-17 | Add content test and list command           |
-| 5.5.11  | 2025-07-11 | Update CLI command parameters documentation |
-| 5.5.10  | 2025-06-29 | Init history                                |
+| Version | Date       | Changes                                         |
+| ------- | ---------- | ----------------------------------------------- |
+| 6.1.2   | 2025-09-26 | Add version command                             |
+| 6.1.0   | 2025-09-26 | Set verbose option to default to true using CLI |
+| 6.1.0   | 2025-09-23 | Add watch command and with option               |
+| 6.0.1   | 2025-09-23 | Add editor command                              |
+| 6.0.0   | 2025-09-17 | Add content test and list command               |
+| 5.5.11  | 2025-07-11 | Update CLI command parameters documentation     |
+| 5.5.10  | 2025-06-29 | Init history                                    |

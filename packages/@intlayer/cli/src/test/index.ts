@@ -29,7 +29,7 @@ export const testMissingTranslations = (
     },
   });
 
-  const result = listMissingTranslations();
+  const result = listMissingTranslations(undefined, options?.configOptions);
 
   const maxKeyColSize = result.missingTranslations
     .map((t) => ` - ${t.key}`)
@@ -76,6 +76,7 @@ export const testMissingTranslations = (
   );
   appLogger(
     `Total missing locales: ${colorizeNumber(result.missingLocales.length, {
+      one: ANSIColors.RED,
       other: ANSIColors.RED,
       zero: ANSIColors.GREEN,
     })}`
@@ -84,6 +85,7 @@ export const testMissingTranslations = (
     `Total missing required locales: ${colorizeNumber(
       result.missingRequiredLocales.length,
       {
+        one: ANSIColors.RED,
         other: ANSIColors.RED,
         zero: ANSIColors.GREEN,
       }

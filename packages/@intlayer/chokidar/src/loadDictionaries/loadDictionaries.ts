@@ -10,7 +10,7 @@ import {
   type IntlayerConfig,
 } from '@intlayer/config';
 import type { Dictionary } from '@intlayer/core';
-import { relative } from 'node:path';
+import { filterInvalidDictionaries } from '../filterInvalidDictionaries';
 import { loadContentDeclarations } from './loadContentDeclaration';
 import { loadRemoteDictionaries } from './loadRemoteDictionaries';
 import { DictionariesLogger } from './log';
@@ -163,7 +163,12 @@ export const loadDictionaries = async (
 ): Promise<{
   localDictionaries: Dictionary[];
   remoteDictionaries: Dictionary[];
+  time: {
+    localDictionaries: number;
+    remoteDictionaries: number;
+  };
 }> => {
+  const loadDictionariesStartTime = Date.now();
   const appLogger = getAppLogger(configuration);
 
   appLogger('Dictionaries:', { isVerbose: true });
@@ -179,28 +184,10 @@ export const loadDictionaries = async (
     setLoadDictionariesStatus
   );
 
-  const filteredLocalDictionaries = localDictionaries.filter((dict) => {
-    const hasKey = Boolean(dict.key);
-    const hasContent = Boolean(dict.content);
+  const localDictionariesTime = Date.now();
 
-    if (!hasContent) {
-      appLogger(
-        [
-          'Content declaration has no exported content',
-          dict.filePath
-            ? relative(configuration.content.baseDir, dict.filePath)
-            : '',
-        ],
-        { level: 'error' }
-      );
-    } else if (!hasKey) {
-      appLogger(['Content declaration has no key', dict.filePath], {
-        level: 'error',
-      });
-    }
-
-    return hasKey && hasContent;
-  });
+  const filteredLocalDictionaries =
+    filterInvalidDictionaries(localDictionaries);
 
   const localDictionariesStatus = filteredLocalDictionaries.map(
     (dict) =>
@@ -217,13 +204,24 @@ export const loadDictionaries = async (
     configuration.editor.clientId && configuration.editor.clientSecret
   );
 
+  if (hasRemoteDictionaries) {
+    // We expect to fetch remote dictionaries soon; suppress a transient local-only render
+    logger.setExpectRemote(true);
+  }
+
   let remoteDictionaries: Dictionary[] = [];
   if (hasRemoteDictionaries) {
     remoteDictionaries = await loadRemoteDictionaries(
       configuration,
-      setLoadDictionariesStatus
+      setLoadDictionariesStatus,
+      {
+        onStartRemoteCheck: () => logger.startRemoteCheck(),
+        onStopRemoteCheck: () => logger.stopRemoteCheck(),
+        onError: (e) => logger.setRemoteError(e),
+      }
     );
   }
+  const remoteDictionariesTime = Date.now();
 
   // Stop spinner and show final progress line(s)
   logger.finish();
@@ -233,5 +231,9 @@ export const loadDictionaries = async (
   return {
     localDictionaries: filteredLocalDictionaries,
     remoteDictionaries,
+    time: {
+      localDictionaries: localDictionariesTime - loadDictionariesStartTime,
+      remoteDictionaries: remoteDictionariesTime - localDictionariesTime,
+    },
   };
 };

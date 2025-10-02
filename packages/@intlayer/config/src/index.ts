@@ -17,6 +17,7 @@ export {
   colorizePath,
   getAppLogger,
   logger,
+  removeColor,
   spinnerFrames,
   v,
   x,
@@ -31,6 +32,7 @@ export type {
   InternationalizationConfig,
   IntlayerConfig,
   LogConfig,
+  LogFunctions,
   MiddlewareConfig,
   PatternsContentConfig,
   ResultDirDerivedConfig,
@@ -39,5 +41,7 @@ export type {
 } from './types/config';
 export { Locales } from './types/locales';
 export type { LocalesValues } from './types/locales';
+export { clearModuleCache } from './utils/clearModuleCache';
 export { ESMxCJSRequire, isESModule } from './utils/ESMxCJSHelpers';
+export { getExtension } from './utils/getExtension';
 export { normalizePath } from './utils/normalizePath';

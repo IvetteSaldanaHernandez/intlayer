@@ -14,6 +14,7 @@ export const locales = [
   Locales.ENGLISH_UNITED_KINGDOM,
   Locales.PORTUGUESE,
   Locales.HINDI,
+  Locales.TURKISH,
 ];
 export const defaultLocale = Locales.ENGLISH;
 
@@ -25,7 +26,6 @@ const config: IntlayerConfig = {
     strictMode: 'strict',
   },
   content: {
-    dictionaryOutput: ['intlayer'],
     contentDir: ['./src', '../../packages/@intlayer/design-system/src'],
   },
   editor: {
@@ -41,6 +41,9 @@ const config: IntlayerConfig = {
   },
   build: {
     importMode: 'dynamic',
+  },
+  ai: {
+    apiKey: process.env.OPENAI_API_KEY,
   },
   log: {
     mode: 'verbose',

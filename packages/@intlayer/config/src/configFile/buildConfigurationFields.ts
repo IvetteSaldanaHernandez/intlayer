@@ -2,6 +2,7 @@ import { join } from 'path';
 import {
   IMPORT_MODE,
   OPTIMIZE,
+  OUTPUT_FORMAT,
   TRAVERSE_PATTERN,
 } from '../defaultValues/build';
 import {
@@ -57,6 +58,7 @@ import type {
   InternationalizationConfig,
   IntlayerConfig,
   LogConfig,
+  LogFunctions,
   MiddlewareConfig,
   PatternsContentConfig,
   ResultDirDerivedConfig,
@@ -624,7 +626,8 @@ const buildEditorFields = (
 });
 
 const buildLogFields = (
-  customConfiguration?: Partial<LogConfig>
+  customConfiguration?: Partial<LogConfig>,
+  logFunctions?: LogFunctions
 ): LogConfig => ({
   /**
    * Indicates if the logger is enabled
@@ -645,6 +648,14 @@ const buildLogFields = (
    * The prefix of the logger.
    */
   prefix: customConfiguration?.prefix ?? PREFIX,
+
+  /**
+   * Functions to log
+   */
+  error: logFunctions?.error,
+  log: logFunctions?.log,
+  info: logFunctions?.info,
+  warn: logFunctions?.warn,
 });
 
 const buildAiFields = (customConfiguration?: Partial<AiConfig>): AiConfig => ({
@@ -739,6 +750,19 @@ const buildBuildFields = (
    * - Use glob pattern.
    */
   traversePattern: customConfiguration?.traversePattern ?? TRAVERSE_PATTERN,
+
+  /**
+   * Output format of the dictionaries
+   *
+   * Can be set on large projects to improve build performance.
+   *
+   * Default: ['cjs', 'esm']
+   *
+   * The output format of the dictionaries. It can be either 'cjs' or 'esm'.
+   * - 'cjs': The dictionaries are outputted as CommonJS modules.
+   * - 'esm': The dictionaries are outputted as ES modules.
+   */
+  outputFormat: customConfiguration?.outputFormat ?? OUTPUT_FORMAT,
 });
 
 /**
@@ -746,7 +770,8 @@ const buildBuildFields = (
  */
 export const buildConfigurationFields = (
   customConfiguration?: CustomIntlayerConfig,
-  baseDir?: string
+  baseDir?: string,
+  logFunctions?: LogFunctions
 ): IntlayerConfig => {
   const internationalizationConfig = buildInternationalizationFields(
     customConfiguration?.internationalization
@@ -763,7 +788,7 @@ export const buildConfigurationFields = (
 
   const editorConfig = buildEditorFields(customConfiguration?.editor);
 
-  const logConfig = buildLogFields(customConfiguration?.log);
+  const logConfig = buildLogFields(customConfiguration?.log, logFunctions);
 
   const aiConfig = buildAiFields(customConfiguration?.ai);
 

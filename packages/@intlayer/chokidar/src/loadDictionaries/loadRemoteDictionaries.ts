@@ -1,10 +1,10 @@
+import { getIntlayerAPIProxy } from '@intlayer/api';
 // @ts-ignore @intlayer/backend is not build yet
 import type { DictionaryAPI } from '@intlayer/backend';
-import { getAppLogger, getConfiguration, x } from '@intlayer/config';
+import { getConfiguration } from '@intlayer/config';
 import type { Dictionary } from '@intlayer/core';
-import remoteDictionariesRecord from '@intlayer/remote-dictionaries-entry';
+import { getRemoteDictionaries } from '@intlayer/remote-dictionaries-entry';
 import { fetchDistantDictionaries } from '../fetchDistantDictionaries';
-import { fetchDistantDictionaryKeysAndUpdateTimestamp } from '../fetchDistantDictionaryKeysAndUpdateTimestamp';
 import { DictionariesStatus } from '../loadDictionaries/loadDictionaries';
 import { sortAlphabetically } from '../utils/sortAlphabetically';
 
@@ -19,18 +19,35 @@ export const formatDistantDictionaries = (
 
 export const loadRemoteDictionaries = async (
   configuration = getConfiguration(),
-  onStatusUpdate?: (status: DictionariesStatus[]) => void
+  onStatusUpdate?: (status: DictionariesStatus[]) => void,
+  options?: {
+    onStartRemoteCheck?: () => void;
+    onStopRemoteCheck?: () => void;
+    onError?: (error: Error) => void;
+  }
 ): Promise<DictionaryAPI[]> => {
-  const appLogger = getAppLogger(configuration);
   const { editor } = configuration;
+  const remoteDictionariesRecord = getRemoteDictionaries(configuration);
 
   const hasRemoteDictionaries = Boolean(editor.clientId && editor.clientSecret);
 
   if (!hasRemoteDictionaries) return [];
 
   try {
-    const distantDictionaryUpdateTimeStamp: Record<string, number> =
-      await fetchDistantDictionaryKeysAndUpdateTimestamp(configuration);
+    options?.onStartRemoteCheck?.();
+
+    const intlayerAPI = getIntlayerAPIProxy(undefined, configuration);
+
+    // Get the list of dictionary keys
+    const getDictionariesKeysResult =
+      await intlayerAPI.dictionary.getDictionariesUpdateTimestamp();
+
+    const distantDictionaryUpdateTimeStamp: Record<string, number> | null =
+      getDictionariesKeysResult.data;
+
+    if (!distantDictionaryUpdateTimeStamp) {
+      throw new Error('No distant dictionaries found');
+    }
 
     const dictionariesKeysToFetch = Object.entries(
       distantDictionaryUpdateTimeStamp
@@ -120,7 +137,9 @@ export const loadRemoteDictionaries = async (
 
     return [...cachedDictionaries, ...distantDictionaries];
   } catch (error) {
-    appLogger(`${x} Failed to fetch distant dictionaries`, { level: 'error' });
+    options?.onError?.(error as Error);
     return [];
+  } finally {
+    options?.onStopRemoteCheck?.();
   }
 };

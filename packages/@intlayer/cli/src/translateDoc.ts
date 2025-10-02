@@ -4,6 +4,7 @@ import {
   formatPath,
   listGitFiles,
   ListGitFilesOptions,
+  parallelize,
 } from '@intlayer/chokidar';
 import {
   ANSIColors,
@@ -13,17 +14,17 @@ import {
   getAppLogger,
   getConfiguration,
   GetConfigurationOptions,
+  IntlayerConfig,
   Locales,
   retryManager,
 } from '@intlayer/config';
 import fg from 'fast-glob';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { readFile } from 'fs/promises';
-import pLimit from 'p-limit';
 import { dirname, join, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { chunkText } from './utils/calculateChunks';
-import { checkAIAccess } from './utils/checkAIAccess';
+import { checkAIAccess } from './utils/checkAccess';
 import { checkFileModifiedRange } from './utils/checkFileModifiedRange';
 import { chunkInference } from './utils/chunkInference';
 import { fixChunkStartEndChars } from './utils/fixChunkStartEndChars';
@@ -43,11 +44,10 @@ export const translateFile = async (
   locale: Locales,
   baseLocale: Locales,
   aiOptions?: AIOptions,
-  configOptions?: GetConfigurationOptions,
+  configuration: IntlayerConfig = getConfiguration(),
   customInstructions?: string
 ) => {
   try {
-    const configuration = getConfiguration(configOptions);
     const appLogger = getAppLogger(configuration, {
       config: {
         prefix: '',
@@ -122,11 +122,19 @@ export const translateFile = async (
             { role: 'user', content: fileToTranslateCurrentChunk },
           ],
           aiOptions,
-          configOptions
+          configuration
         );
 
         appLogger(
-          `${prefix}${colorizeNumber(result.tokenUsed)} tokens used - Chunk ${colorizeNumber(i + 1)} of ${colorizeNumber(chunks.length)}`
+          [
+            `${prefix}`,
+            `${ANSIColors.GREY_DARK}[Chunk `,
+            colorizeNumber(i + 1),
+            `${ANSIColors.GREY_DARK} of `,
+            colorizeNumber(chunks.length),
+            `${ANSIColors.GREY_DARK}] →${ANSIColors.RESET} `,
+            `${colorizeNumber(result.tokenUsed)} tokens used`,
+          ].join('')
         );
 
         const fixedTranslatedChunkResult = fixChunkStartEndChars(
@@ -206,13 +214,13 @@ export const translateDoc = async ({
     nbSimultaneousFileProcessed = 10; // Limit the number of simultaneous file processed to 10
   }
 
-  const limit = pLimit(nbSimultaneousFileProcessed ?? 3);
-
   let docList: string[] = fg.sync(docPattern, {
     ignore: excludedGlobPattern,
   });
 
-  checkAIAccess(configuration, aiOptions);
+  const hasCMSAuth = await checkAIAccess(configuration, aiOptions);
+
+  if (!hasCMSAuth) return;
 
   if (gitOptions) {
     const gitChangedFiles = await listGitFiles(gitOptions);
@@ -237,52 +245,52 @@ export const translateDoc = async ({
   appLogger(`Translating ${colorizeNumber(docList.length)} files:`);
   appLogger(docList.map((path) => ` - ${formatPath(path)}\n`));
 
-  const tasks = docList.map((docPath) =>
-    locales.flatMap((locale) =>
-      limit(async () => {
-        appLogger(
-          `Translating file: ${formatPath(docPath)} to ${formatLocale(locale)}`
-        );
+  // Create all tasks to be processed
+  const allTasks = docList.flatMap((docPath) =>
+    locales.map((locale) => async () => {
+      appLogger(
+        `Translating file: ${formatPath(docPath)} to ${formatLocale(locale)}`
+      );
 
-        const absoluteBaseFilePath = join(
-          configuration.content.baseDir,
-          docPath
-        );
-        const outputFilePath = getOutputFilePath(
-          absoluteBaseFilePath,
-          locale,
-          baseLocale
-        );
+      const absoluteBaseFilePath = join(configuration.content.baseDir, docPath);
+      const outputFilePath = getOutputFilePath(
+        absoluteBaseFilePath,
+        locale,
+        baseLocale
+      );
 
-        // check if the file exist, otherwise create it
-        if (!existsSync(outputFilePath)) {
-          appLogger(`File ${outputFilePath} does not exist, creating it...`);
-          mkdirSync(dirname(outputFilePath), { recursive: true });
-          writeFileSync(outputFilePath, '');
-        }
+      // check if the file exist, otherwise create it
+      if (!existsSync(outputFilePath)) {
+        appLogger(`File ${outputFilePath} does not exist, creating it...`);
+        mkdirSync(dirname(outputFilePath), { recursive: true });
+        writeFileSync(outputFilePath, '');
+      }
 
-        const fileModificationData = checkFileModifiedRange(outputFilePath, {
-          skipIfModifiedBefore,
-          skipIfModifiedAfter,
-        });
+      const fileModificationData = checkFileModifiedRange(outputFilePath, {
+        skipIfModifiedBefore,
+        skipIfModifiedAfter,
+      });
 
-        if (fileModificationData.isSkipped) {
-          appLogger(fileModificationData.message);
-          return;
-        }
+      if (fileModificationData.isSkipped) {
+        appLogger(fileModificationData.message);
+        return;
+      }
 
-        await translateFile(
-          absoluteBaseFilePath,
-          outputFilePath,
-          locale as Locales,
-          baseLocale,
-          aiOptions,
-          configOptions,
-          customInstructions
-        );
-      })
-    )
+      await translateFile(
+        absoluteBaseFilePath,
+        outputFilePath,
+        locale as Locales,
+        baseLocale,
+        aiOptions,
+        configuration,
+        customInstructions
+      );
+    })
   );
 
-  await Promise.all(tasks);
+  await parallelize(
+    allTasks,
+    (task) => task(),
+    nbSimultaneousFileProcessed ?? 3
+  );
 };

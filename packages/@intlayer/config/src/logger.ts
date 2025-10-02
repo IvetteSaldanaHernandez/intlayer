@@ -9,42 +9,42 @@ export type Details = {
 
 export type Logger = (content: any, details?: Details) => void;
 
-export const logger: Logger = (
-  content,
-  details = {
-    isVerbose: false,
-    level: undefined,
-    config: { mode: 'default', prefix: '' },
-  }
-) => {
-  const mode = details.config?.mode ?? 'default';
-  const prefix = Boolean(details.config?.prefix)
-    ? details.config?.prefix
+export const logger: Logger = (content, details) => {
+  const isVerbose = details?.isVerbose ?? false;
+  const mode = details?.config?.mode ?? 'default';
+  const level = details?.level ?? 'info';
+  const prefix = Boolean(details?.config?.prefix)
+    ? details?.config?.prefix
     : undefined;
+  const log = details?.config?.log ?? console.log;
+  const info = details?.config?.info ?? console.info;
+  const warn = details?.config?.warn ?? console.warn;
+  const error = details?.config?.error ?? console.error;
+  const debug = details?.config?.debug ?? console.debug;
 
   if (mode === 'disabled') return;
 
-  if (details.isVerbose && mode !== 'verbose') return;
+  if (isVerbose && mode !== 'verbose') return;
 
   const flatContent = prefix ? [prefix, ...[content].flat()] : [content].flat();
 
-  if (details.level === 'debug') {
-    return console.debug(...flatContent);
+  if (level === 'debug') {
+    return debug(...flatContent);
   }
 
-  if (details.level === 'info') {
-    return console.info(...flatContent);
+  if (level === 'info') {
+    return info(...flatContent);
   }
 
-  if (details.level === 'warn') {
-    return console.warn(...flatContent);
+  if (level === 'warn') {
+    return warn(...flatContent);
   }
 
-  if (details.level === 'error') {
-    return console.error(...flatContent);
+  if (level === 'error') {
+    return error(...flatContent);
   }
 
-  console.log(...flatContent);
+  log(...flatContent);
 };
 
 export enum ANSIColors {
@@ -80,34 +80,43 @@ export const getAppLogger =
       },
     });
 
-export const colorize = (s: string, color?: ANSIColors): string =>
-  color ? `${color}${s}${ANSIColors.RESET}` : s;
+export const colorize = (
+  s: string,
+  color?: ANSIColors,
+  reset?: boolean | ANSIColors
+): string =>
+  color
+    ? `${color}${s}${reset ? (typeof reset === 'boolean' ? ANSIColors.RESET : reset) : ANSIColors.RESET}`
+    : s;
 
 export const colorizeLocales = (
   locales: Locales | Locales[],
-  color = ANSIColors.GREEN
+  color = ANSIColors.GREEN,
+  reset: boolean | ANSIColors = ANSIColors.RESET
 ) =>
   [locales]
     .flat()
-    .map((locale) => colorize(locale, color))
+    .map((locale) => colorize(locale, color, reset))
     .join(`, `);
 
 export const colorizeKey = (
   keyPath: string | string[],
-  color = ANSIColors.BEIGE
+  color = ANSIColors.BEIGE,
+  reset: boolean | ANSIColors = ANSIColors.RESET
 ) =>
   [keyPath]
     .flat()
-    .map((key) => colorize(key, color))
+    .map((key) => colorize(key, color, reset))
     .join(`, `);
 
 export const colorizePath = (
   path: string | string[],
-  color = ANSIColors.GREY
+  color = ANSIColors.GREY,
+  reset: boolean | ANSIColors = ANSIColors.RESET
 ) =>
   [path]
     .flat()
-    .map((p) => colorize(p, color))
+    .map((p) => colorize(p, color, reset))
     .join(`, `);
 
 /**
@@ -137,7 +146,8 @@ export const colorizeNumber = (
   return colorize(number.toString(), color);
 };
 
-const removeColor = (text: string) => text.replace(/\x1b\[[0-9;]*m/g, '');
+export const removeColor = (text: string) =>
+  text.replace(/\x1b\[[0-9;]*m/g, '');
 
 const getLength = (length: number | number[] | string | string[]): number => {
   let value: number = 0;
