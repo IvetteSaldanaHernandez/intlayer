@@ -59,8 +59,9 @@ export const Navbar: FC = () => {
           <LogoWithText className="max-h-6 w-auto flex-auto sm:max-h-6" />
         </Link>
       }
-      selectedChoice={selectedChoice}
-      desktopSections={Object.values(sections).map(
+      fix-avatar-padding
+      selectedChoice={getCleanTabSelector(pathWithoutLocale)}
+      desktopSections={(Object.values(sections) as { id: any; url: any; label: any; title: any; }[]).map
         ({ id, url, label, title }) => (
           <Link
             id={id?.value}
@@ -78,7 +79,7 @@ export const Navbar: FC = () => {
           </Link>
         )
       )}
-      mobileTopSections={Object.values(sections).map(
+      mobileTopSections={(Object.values(sections) as { id: any; url: any; label: any; title: any; }[]).map(
         ({ id, url, label, title }) => (
           <Link
             id={id?.value}
@@ -138,7 +139,7 @@ export const Navbar: FC = () => {
         </div>
       }
       rightItemsMobile={
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <LocaleSwitcher panelProps={{ className: '-left-16' }} />
           <SwitchThemeSwitcher />
           {isAuthenticated && (
@@ -175,7 +176,7 @@ export const Navbar: FC = () => {
               className="group-hover/github:fill-text-opposite mr-1"
             />
           </Link>
-          <div className="-m-1.5">
+          <div className="flex items-center">
             <ProfileDropDown />
           </div>
         </>
